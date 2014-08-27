@@ -1,0 +1,14 @@
+sshd:/etc/ssh/sshd_config:PermitRootLogin:no
+sshd:/etc/ssh/sshd_config:PubkeyAuthentication:no
+sshd:/etc/ssh/sshd_config:PermitEmptyPasswords:no
+sshd:/etc/ssh/sshd_config:UsePAM:yes
+sshd:/etc/ssh/sshd_config:PermitUserEnvironment:no
+sshd:/etc/ssh/sshd_config:PermitTunnel:no
+sshd:/etc/ssh/sshd_config:ChrootDirectory:none
+sshd:/etc/ssh/sshd_config:SyslogFacility:AUTHPRIV
+sshd:/etc/ssh/sshd_config:LogLevel:info
+sshd:/etc/ssh/sshd_config:RSAAuthentication:yes
+userExist:root:system
+fileOwnership:/bin:bin:bin
+resolvConfDNS:/etc/resolv.conf:.:.
+statRoute:.:.
