@@ -1,0 +1,926 @@
+#!/usr/bin/bash
+
+# Variables and common functions ======
+
+###
+# @function enableColor
+# Define color constants and enable color in the shell.
+#
+enableColor(){
+	 Off='\e[0m'       # Text Reset
+
+        Black='\e[0;30m'        # Black
+        Red='\e[0;31m'          # Red
+        Green='\e[0;32m'        # Green
+        Yellow='\e[0;33m'       # Yellow
+        Blue='\e[0;34m'         # Blue
+        Purple='\e[0;35m'       # Purple
+        Cyan='\e[0;36m'         # Cyan
+        White='\e[0;37m'        # White
+
+        EchoOption="-e "
+}
+
+###
+# @function disableColor
+# Define empty color constants and disable color in the shell.
+#
+disableColor(){
+	Off=""
+
+    Black=""
+	Red=""
+	Green=""
+	Yellow=""
+	Blue=""
+	Purple=""
+	Cyan=""
+	White=""
+
+	EchoOption=""
+}
+
+# Default 0 for HTML Output
+HTML=0
+
+###
+# @function enableHTML
+# Enable HTML output and call the disableColor Function
+#
+enableHTML(){
+	HTML=1
+	disableColor
+}
+
+###
+# @function disableHTML
+# Disable HTML output
+# @note This function DON'T call enableColor
+#
+disableHTML(){
+	HTML=0
+}
+
+# Default for ERRORONLY is 0, ERRORONLY is use to toggle only the error messages in output
+ERRORONLY=0
+
+###
+# @function enableERRORONLY
+# Set ERRORONLY to 1, in order to toggle only the error messages in output
+#
+enableERRORONLY(){
+	ERRORONLY=1
+}
+
+###
+# @function disableERRORONLY
+# Set ERRORONLY to 0, in order to toggle all the messages in output
+#
+disableERRORONLY(){
+	ERRORONLY=0
+}
+
+# Default for CONFIGFILE is "Null"
+CONFIGFILE="Null"
+
+###
+# @function setConfigFile
+# Set the configuration file to read (if the function support it).
+#
+setConfigFile(){
+	CONFIGFILE=$1
+	echo $EchoOption$Cyan"//////"$Off
+	echo $EchoOption$Cyan"-file option detected : "$Off
+	echo $EchoOption$Cyan"Trying to use "$CONFIGFILE" as config file"$Off
+	echo $EchoOption$Cyan"//////"$Off
+	if test ! -f $CONFIGFILE
+	then
+		 echo $EchoOption$Red"File "$CONFIGFILE" NOT FOUND !"$Off
+		 echo $EchoOption$Green"Using default config"$Off
+	fi
+	echo $EchoOption"" 
+}
+
+###
+# @function printTitle
+# Print out the title of the check
+# @note This function check for HTML constant to print out html if needed
+#
+printTitle(){
+	if test $HTML -eq 1
+	then
+		echo "<h1>"$*"</h1>"
+	else
+		echo $EchoOption""
+		echo $EchoOption$*
+	fi
+}
+
+###
+# @function hr
+# Print an horizontal row
+# @note This function check for HTML constant to print out html if needed
+#
+hr(){
+	if test $HTML -eq 1
+	then
+		echo "<hr>"
+	else
+		echo $EchoOption"========================================"
+	fi
+}
+
+###
+# @function ParagStart
+# Start of a paragraph
+# @note This function check for HTML constant to print out html if needed
+#
+ParagStart(){
+	if test $HTML -eq 1
+	then
+		echo "<p>"
+	else
+		echo $EchoOption""
+	fi
+}
+
+###
+# @function ParagStop
+# End of a paragraph
+# @note This function check for HTML constant to print out html if needed
+#
+ParagStop(){
+	if test $HTML -eq 1
+	then
+		echo "</p>"
+	else
+		echo $EchoOption""
+	fi
+}
+
+###
+# @function success
+# Print a success message
+# @param message Message to print out
+# @note This function check for HTML constant to print out html if needed
+# @note This function check for ERRORONLY constant to prevent output if needed 
+#
+success(){
+	if test $HTML -eq 1
+	then
+		if test $ERRORONLY -eq 0
+		then
+			echo "<div style='color:green;'>"
+			echo "    "$*
+			echo "</div>"
+		fi
+	else
+		if test $ERRORONLY -eq 0
+		then
+			echo $EchoOption$Green""$*""$Off
+		fi
+	fi
+}
+
+###
+# @function normal
+# Print a standard message
+# @param message Message to print out
+# @note This function check for HTML constant to print out html if needed
+# @note This function check for ERRORONLY constant to prevent output if needed
+#
+normal(){
+	if test $HTML -eq 1
+	then
+		if test $ERRORONLY -eq 0
+		then
+			echo "<div>"
+			echo "    "$*
+			echo "</div>"
+		fi
+	else
+		if test $ERRORONLY -eq 0
+		then
+			echo $EchoOption" "$*
+		fi
+	fi
+}
+
+###
+# @function fail
+# Print a failure message
+# @param message Message to print out
+# @note This function check for HTML constant to print out html if needed
+#
+fail(){
+	if test $HTML -eq 1
+	then
+		echo "<div style='color:red;'>"
+		echo "    "$*
+		echo "</div>"
+	else
+		echo $EchoOption$Red""$*""$Off
+	fi
+}
+
+
+# File manipulation and research functions
+
+###
+# @function patternSearch
+# Search a pattern in a file
+# @param file File to check
+# @param option Ssh_config option to check
+# @param value Value for the ssh_config option to check
+#
+patternSearch(){
+	file=$1
+	option=$2
+	value=$3
+
+	concat=$2'.'$3
+	normal "["$Yellow$concat$Off"]"
+	sudo cat $file | egrep "^"$option | egrep $value"$" > /dev/null
+	if test $? -eq 0
+	then
+		success "[OK]"
+	fi
+
+	sudo cat $file | egrep "^"$option | egrep -v $value"$" >/dev/null
+	if test $? -eq 0
+	then
+			echo $EchoOption""$Red
+			fail "In "$Blue$file$Off" : "
+			fail "Searching for option "$Yellow$option$Off" with value : "$Purple$value$Off
+			fail "NOT MATCHING LINES :"$Red
+			if test $HTML -eq 1
+			then
+					fail `sudo cat $file | egrep $option | egrep -v $value"$" | sed 's/$/<\/br>'/g`
+			else
+					fail `sudo cat $file | egrep $option | egrep -v $value"$"`
+			fi
+			fail "---------------"
+			echo $EchoOption""$Off
+	fi
+
+}
+
+###
+# @function checkSyslogConf
+# Check rules in syslog config file
+# @param file File to check
+#
+checkSyslogConf(){
+	file=$1
+	normal $Cyan"Checking : "$file$Off
+	sudo ls -ls $file > /dev/null
+	if test $? -eq 0
+	then
+		ParagStart
+		echo $EchoOption$Green
+		if test $HTML -eq 1
+		then
+			sudo cat $file | egrep -v "^#" | egrep -v "^$" | sed 's/$/<\/br>/g'
+		else
+			sudo cat $file | egrep -v "^#" | egrep -v "^$"
+		fi
+		echo $EchoOption$Off
+		ParagStop
+	else
+		fail $Cyan$file$Red" Not found !"$Off
+		file=`echo $file | sed s/'^.*\/'//g`
+		file=*$file
+		fail "Searching in /etc for "$Yellow$file$Off
+		fail $EchoOption$Cyan
+		fail `sudo find /etc -name $file`
+		fail $EchoOption$Off"--------------------------------------------"
+		
+		checkSyslogConf /etc/rsyslog.conf
+	fi
+}
+
+###
+# @function userExist
+# Check user existence
+# @param user User to check
+# @param primaryGroup Primary group that the user should have
+#
+userExist(){
+	userExist_user=$1
+	userExist_group=$2
+
+	userExist_id=`sudo id $userExist_user`
+	if test $? -ne 0
+	then 
+		fail " id "$userExist_user" Failed !"$Off
+	else
+		result_gid=`echo $userExist_id | cut -d = -f 3 | sed s/"^.*("//g | sed s/").*"//g`
+		if test $userExist_group = $result_gid
+		then 
+			success $Yellow$userExist_user$Green" is in group "$Yellow$result_gid$Off
+		else
+			fail $Yellow$userExist_user$Red" is in group "$Yellow$result_gid","$Red" NOT in "$Yellow$userExist_group$Off
+		fi
+	fi
+}
+
+###
+# @function fileOwnership
+# Check primary group and owner of a file.
+# @param filePath Absolute path to the file
+# @param owner Owner that the file should have
+# @param primaryGroup Primary group that the file should have
+#	
+fileOwnership(){	
+
+        m_path=$1
+        m_owner=$2
+        m_group=$3
+
+        base=`basename $m_path`
+        m_rights=`sudo ls -l $m_path/.. | grep $base | sed s/"  * "/":"/g | sed s/" "/":"/g`
+
+        r_owner=`echo $m_rights | cut -d ":" -f 3`
+        if test $m_owner = $r_owner
+        then
+                success $m_path" owner is "$r_owner
+        else
+                fail $m_path" owner is "$r_owner
+        fi
+
+        if test $# -eq 3
+        then
+                r_group=`echo $m_rights | cut -d ":" -f 4`
+                if test $m_group = $r_group
+                then
+                        success $m_path" owner group is "$r_group
+                else
+                        fail $m_path" owner group is "$r_group
+                fi
+        fi
+}
+	
+###
+# @function fsSize
+# Check filesystem size.
+# @param filePath Absolute path to the file
+# @param minimumSize The minimum size in Mb that the fs should have
+#
+fsSize(){
+	m_fsPath=$1
+	m_minimumSize=$2
+	
+	m_size=`df -m $m_fsPath | tail -n 1 | sed s/"  * "/" "/g | cut -d " " -f 2 | cut -d . -f 1`
+	if test "$m_size" -gt $m_minimumSize
+	then
+		success $m_fsPath" size ("$m_size"MB) is > "$m_minimumSize"MB"
+	else
+		fail $m_fsPath" size ("$m_size"MB) is <= "$m_minimumSize"MB"
+	fi
+}
+
+###
+# @function resolvConfDNS
+# Check resolv.conf for DNS.
+# @param filePath Absolute path to the file
+# @param option Option in domain,search,nameserver
+# @param value Value that the option should have
+#
+resolvConfDNS(){
+	m_filePath=$1
+	#option :domain,search,nameserver
+	m_option=$2
+	m_value=$3
+	
+	m_result=`cat $m_filePath | egrep $m_option | egrep $m_value`
+	if test $? -eq 0
+	then
+		for m_line in `cat $m_filePath | sed s/"  *"/";"/g | egrep $m_option | egrep $m_value`
+		do
+			m_result=`echo $m_line | cut -d ";" -f 1- | sed s/";"/" "/g`
+			success $m_filePath" : "$m_result
+        done
+	else
+		for m_line in `cat $m_filePath | sed s/"  *"/";"/g | egrep $m_option`
+		do
+			m_result=`echo $m_line | cut -d ";" -f 1- | sed s/";"/" "/g`
+			fail $m_filePath" : "$m_option" != "$m_value", found instead : "$m_result
+        done
+	fi
+
+}
+	
+###
+# @function statRoute
+# Check netstat for routes.
+# @param destination Destination 
+# @param gateway Gateway address
+# @note The route could be an ip, a subnet, an hostname, "loopback" or "default"
+#
+statRoute(){
+	#Name of the route could be ip,subnet or default
+	m_destination=$1
+	m_gateway=$2
+	
+	m_result=`netstat -rn | egrep $m_destination | egrep $m_gateway`
+	if test $? -eq 0
+	then
+		for m_line in `netstat -rn  | sed s/"  *"/";"/g | egrep $m_destination | egrep $m_gateway`
+		do
+			m_result=`echo $m_line | cut -d ";" -f 1- | sed s/";"/" "/g`
+			success "netstat : "$m_result
+        done
+	else
+		for m_line in `netstat -rn  | sed s/"  *"/";"/g | egrep $m_destination`
+		do
+			m_result=`echo $m_line | cut -d ";" -f 1- | sed s/";"/" "/g`
+			fail "netstat : "$m_destination" "$m_gateway" doesn't exist, found instead : "$m_result
+        done
+	fi
+}
+	
+# Checks ======
+
+###
+# @function LocalUsersCheck
+# Check local users and search for unsecured password hashes
+#
+LocalUsersCheck(){
+	hr
+	printTitle "LOCAL USERS AND UNSECURE HASH : not ssha"
+	ParagStart
+	if test `uname` != 'AIX'
+	then
+		correctLines=`sudo cat $passwordFile | egrep "\$1\$"`
+		if test $? -eq 0
+		then
+			#si bon format
+			for line in $correctLines
+			do
+				success `echo $line | cut -d ":" -f 1`
+				success "    Valid Algorithm used for hash"$Off
+				success "---"
+			done
+		fi
+		correctLines=`sudo cat $passwordFile | egrep -v "\$1\$"`
+		if test $? -eq 0
+		then
+			#si mauvais format
+			for line in $correctLines
+			do
+				fail `echo $line | cut -d ":" -f 1`
+				fail "    Invalid Algorithm used for hash"$Off
+				fail "---"
+			done
+		fi
+	else
+		ParagStart
+		echo $EchoOption$Red
+		if test $HTML -eq 1
+		then
+			sudo cat $passwordFile | egrep "password|:" | grep -v "ssha" | grep -v "password = \*" | sed 's/$/<\/br>/g'
+		else
+			sudo cat $passwordFile | egrep "password|:" | grep -v "ssha" | grep -v "password = \*"
+		fi
+		echo $EchoOption$Off
+		ParagStop
+	fi
+	ParagStop
+}
+
+###
+# @function sshdConfCheck
+# Check ssh config file(s)
+# @note Support CONFIGFILE use
+#
+sshdConfCheck(){
+	hr
+	printTitle "sshd check"
+	ParagStart
+	if test -f $CONFIGFILE
+	then
+		success "sshd check"
+		success $Cyan"*************************"$Off
+		success $Cyan"Reading from "$CONFIGFILE$Off
+		success $Cyan"*************************"$Off
+		sshdLines=`cat $CONFIGFILE| egrep "^sshd"`
+		for sshdLine in $sshdLines
+		do
+			sshdFile=`echo $sshdLine | cut -d ":" -f 2`
+			sshdRegex=`echo $sshdLine | cut -d ":" -f 3`
+			sshdRegex="#?"$sshdRegex
+			sshdVal=`echo $sshdLine | cut -d ":" -f 4`
+			normal "Checking "$sshdFile
+			patternSearch $sshdFile $sshdRegex $sshdVal
+		done
+	else
+		normal "Checking "$sshdConf
+		patternSearch $sshdConf "#?PermitRootLogin" "no"
+		patternSearch $sshdConf "#?PubkeyAuthentication" "no"
+		patternSearch $sshdConf "#?PermitEmptyPasswords" "no" #
+		patternSearch $sshdConf "#?UsePAM" "yes"
+		patternSearch $sshdConf "#?PermitUserEnvironment" "no"
+		patternSearch $sshdConf "#?PermitTunnel" "no"
+		patternSearch $sshdConf "#?ChrootDirectory" "none"
+		patternSearch $sshdConf "#?SyslogFacility" "AUTHPRIV"
+		patternSearch $sshdConf "#?LogLevel" "info"
+		patternSearch $sshdConf "#?RSAAuthentication" "yes"
+	fi
+	ParagStop
+}
+
+###
+# @function syslogRulesCheck
+# Checks for syslog rules
+#
+syslogRulesCheck(){
+	hr
+	printTitle "Checking SyslogRules"
+	ParagStart
+	if test `uname` != 'AIX'
+	then
+		checkSyslogConf /etc/syslog.conf
+	else
+		checkSyslogConf /etc/syslog.conf
+	fi
+	ParagStop
+}
+
+###
+# @function userExistCheck
+# Check users existence
+# @note Support CONFIGFILE use
+#
+userExistCheck(){
+	hr
+	printTitle "Checking if user exist, user's group"
+	ParagStart
+	echo $EchoOption""
+	if test -f $CONFIGFILE
+	then
+		success $Cyan"*************************"$Off
+		success $Cyan"Reading from "$CONFIGFILE$Off
+		success $Cyan"*************************"$Off
+		userExistLines=`cat $CONFIGFILE | egrep "^userExist"`
+		for userExistLine in $userExistLines
+		do
+			userExistUser=`echo $userExistLine | cut -d ":" -f 2`
+			userExistGroup=`echo $userExistLine | cut -d ":" -f 3`
+			
+			userExist $userExistUser $userExistGroup
+		done
+	else
+		normal $EchoOption""
+	fi
+	ParagStop
+}
+
+###
+# @function fileOwnershipCheck
+# Check files owner and primaryGroup owner
+# @note Support CONFIGFILE use
+#
+fileOwnershipCheck(){
+	hr
+	printTitle "fileOwnership check"
+	ParagStart
+	if test -f $CONFIGFILE
+	then
+		success "fileOwnership check"
+		success $Cyan"*************************"$Off
+		success $Cyan"Reading from "$CONFIGFILE$Off
+		success $Cyan"*************************"$Off
+		fileOwnershipLines=`cat $CONFIGFILE| egrep "^fileOwnership"`
+		for fileOwnershipLine in $fileOwnershipLines
+		do
+			fileOwnershipFilePath=`echo $fileOwnershipLine | cut -d ":" -f 2`
+			fileOwnershipOwner=`echo $fileOwnershipLine | cut -d ":" -f 3`
+			fileOwnershipGroup=`echo $fileOwnershipLine | cut -d ":" -f 4`
+			normal "Checking "$fileOwnershipFilePath
+			fileOwnership $fileOwnershipFilePath $fileOwnershipOwner $fileOwnershipGroup
+		done
+	else
+		normal "fileOwnership check"
+		fileOwnership /bin bin bin
+	fi
+	ParagStop
+}
+
+###
+# @function fsSizeCheck
+# Check fileSytems sizes
+# @note Support CONFIGFILE use
+#
+fsSizeCheck(){
+	hr
+	printTitle "fsSize check"
+	ParagStart
+	if test -f $CONFIGFILE
+	then
+		success "fsSize check"
+		success $Cyan"*************************"$Off
+		success $Cyan"Reading from "$CONFIGFILE$Off
+		success $Cyan"*************************"$Off
+		fsSizeLines=`cat $CONFIGFILE| egrep "^fsSize"`
+		for fsSizeLine in $fsSizeLines
+		do
+			fsSizeFilePath=`echo $fsSizeLine | cut -d ":" -f 2`
+			fsSizeMinSize=`echo $fsSizeLine | cut -d ":" -f 3`
+			normal "Checking "$fsSizeFilePath
+			fsSize $fsSizeFilePath $fsSizeMinSize
+		done
+	else
+		normal "fsSize check"
+	fi
+	ParagStop
+}
+
+###
+# @function resolvConfDNSCheck
+# Check dns config
+# @note Support CONFIGFILE use
+#
+resolvConfDNSCheck(){
+	hr
+	printTitle "resolvConfDNS check"
+	ParagStart
+	if test -f $CONFIGFILE
+	then
+		success "resolvConfDNS check"
+		success $Cyan"*************************"$Off
+		success $Cyan"Reading from "$CONFIGFILE$Off
+		success $Cyan"*************************"$Off
+		resolvConfDNSLines=`cat $CONFIGFILE| egrep "^resolvConfDNS"`
+		for resolvConfDNSLine in $resolvConfDNSLines
+		do
+			resolvConfDNSFilePath=`echo $resolvConfDNSLine | cut -d ":" -f 2`
+			resolvConfDNSOption=`echo $resolvConfDNSLine | cut -d ":" -f 3`
+			resolvConfDNSValue=`echo $resolvConfDNSLine | cut -d ":" -f 4`
+			normal "Checking "$resolvConfDNSFilePath
+			resolvConfDNS $resolvConfDNSFilePath $resolvConfDNSOption $resolvConfDNSValue
+		done
+	else
+		normal "resolvConfDNS check"
+		resolvConfDNS /etc/resolv.conf "." "."
+	fi
+	ParagStop
+}
+
+###
+# @function statRouteCheck
+# Check dns config
+# @note Support CONFIGFILE use
+#
+statRouteCheck(){
+	hr
+	printTitle "statRoute check"
+	ParagStart
+	if test -f $CONFIGFILE
+	then
+		success "statRoute check"
+		success $Cyan"*************************"$Off
+		success $Cyan"Reading from "$CONFIGFILE$Off
+		success $Cyan"*************************"$Off
+		statRouteLines=`cat $CONFIGFILE| egrep "^statRoute"`
+		for statRouteLine in $statRouteLines
+		do
+			statRouteDestination=`echo $statRouteLine | cut -d ":" -f 2`
+			statRouteGateway=`echo $statRouteLine | cut -d ":" -f 3`
+			normal "Checking netstat"
+			statRoute  $statRouteDestination $statRouteGateway
+		done
+	else
+		normal "statRoute check"
+		statRoute "." "."
+	fi
+	ParagStop
+}
+
+
+# How to config
+
+###
+# @function howTo
+# Print out the instructions for the creation of your own configCheck configuration file.
+#
+howTo(){
+	hr
+	printTitle "How to create your configurationCheck file"
+	ParagStart
+		normal "The configuration file format is simple"
+		normal "Each line's format must be"
+		success " command:argument:argument2:..."
+		normal "For example to check for 'PermitRootLogin yes' in /etc/ssh/sshd_config, type:"
+		success "    sshd:/etc/ssh/sshd_config:PermitRootLogin:yes"
+		normal ""
+	ParagStop
+	ParagStart
+		normal "Here are the commands and their arguments : "
+		normal "- To check for sshd_config"
+		success "    sshd:FileToCheck:ConfigOption:Value"
+		normal "- To check for user existence"
+		success "    userExist:User:Group"
+		normal "- To check a file owner"
+		success "    fileOwnership:FilePath:Owner:Group"
+		normal "- To check a filesystem size"
+		success "    fsSize:FilePath:MinSize"
+		normal "- To check DNS config"
+		success "    resolvConfDNS:FilePath:OptionRegex:ValueRegex"
+		normal "- To check routes"
+		success "    statRoute:destinationRegex:gatewayRegex"
+	ParagStop
+}
+
+# Usage function =====
+
+###
+# @function usage
+# Print program usage
+#
+usage(){
+	hr
+	printTitle "Usage : "$Cyan$0$Off" "$Green"[-nc] [-html] [-eo]"$Green"[-file "$Cyan"check.conf"$Green"]"$Off" "$Yellow"Check [Check]*"$Off
+	normal "How to make the configuration file : "$Cyan$0$Off" "$Green"-howToConfig"$Off
+	ParagStart
+	echo $EchoOption"-"
+	echo $EchoOption$Purple"[Optional]"$Green"-nc"$Off" : "
+	echo $EchoOption"    ""Force disable colors in output"
+	echo $EchoOption$Purple"[Optional]"$Green"-html"$Off" : "
+	echo $EchoOption"    ""HTML in output"
+	echo $EchoOption$Purple"[Optional]"$Green"-eo"$Off" : "
+	echo $EchoOption"    ""Error Only : Print only fail related messages"
+	echo $EchoOption$Purple"[Optional]"$Green"-file "$Cyan" check.conf"$Off" : "
+	echo $EchoOption"    ""Force disable colors in output"
+	echo $EchoOption"-"
+	echo $EchoOption"Check in :"
+	echo $EchoOption$Yellow"-all"$Off" : "
+	echo $EchoOption"    ""Run all checks"
+	echo $EchoOption$Yellow"-users"$Off" : "
+	echo $EchoOption"    ""Local user check, and checks for the alogorithm used to hash passwords"
+	echo $EchoOption$Yellow"-sshd"$Off" : "
+	echo $EchoOption"    ""Checks well known options in sshd.conf"
+	echo $EchoOption$Yellow"-syslog"$Off" : "
+	echo $EchoOption"    ""Checks for syslog's rules"
+	echo $EchoOption$Yellow"-userExist"$Off" : "
+	echo $EchoOption"    ""Checks for id of the user and check users's primary group"
+	echo $EchoOption$Yellow"-fileOwnership"$Off" : "
+	echo $EchoOption"    ""Checks for file Ownership : user and primary group"
+	echo $EchoOption$Yellow"-fsSize"$Off" : "
+	echo $EchoOption"    ""Checks for fileSytem size"
+	echo $EchoOption$Yellow"-resolvConfDNS"$Off" : "
+	echo $EchoOption"    ""Checks for DNS config"
+	echo $EchoOption$Yellow"-statRoute"$Off" : "
+	echo $EchoOption"    ""Checks for routes configuration"
+	echo $EchoOption"-"
+	echo $EchoOption$Yellow"-usage"$Off" : "
+	echo $EchoOption$Yellow"--help"$Off" : "
+	echo $EchoOption$Yellow"-h"$Off" : "
+	echo $EchoOption"    ""Print this help."
+	echo $EchoOption"-"
+	ParagStop
+}
+
+# argument checking function  =======
+
+###
+# @function checkArg
+# Check the program arguments, and run the corresponding functions
+# @param args Program arguments 
+#
+checkArg(){
+	for arg in $@
+	do
+		case $1 in
+			"-howToConfig")
+				howTo
+				;;
+			"-html")
+				#HTML output
+				enableHTML
+				;;
+			"-eo")
+				enableERRORONLY
+				#error only
+				;;
+			"-nc")
+				#no collor
+				disableColor
+				;;
+			"-file")
+				setConfigFile $2
+				;;
+			"-usage")
+				usage
+				;;
+			"--help")
+				usage
+				;;
+			"-h")
+				usage
+				;;
+			"-all")
+				LocalUsersCheck
+				sshdConfCheck
+				syslogRulesCheck
+				userExistCheck
+				fileOwnershipCheck
+				fsSizeCheck
+				resolvConfDNSCheck
+				statRouteCheck
+				;;
+			"-users")
+				LocalUsersCheck
+				;;
+			"-sshd")
+				sshdConfCheck
+				;;
+			"-syslog")
+				syslogRulesCheck
+				;;
+			"-userExist")
+				userExistCheck
+				;;
+			"-fileOwnership")
+				fileOwnershipCheck
+				;;
+			"-fsSize")
+				fsSizeCheck
+				;;
+			"-resolvConfDNS")
+				resolvConfDNSCheck
+				;;
+			"-statRoute")
+				statRouteCheck
+				;;
+			*)
+				;;
+		esac
+		shift
+	done
+}
+
+#======================== MAIN ======================
+
+# set environment variables
+
+if test `uname` != 'AIX'
+then
+	enableColor
+
+	sshdConf=/etc/ssh/sshd_config
+	passwordFile=/etc/shadow
+else
+	bashAvailiable=0
+	bashPath=`whereis bash | cut -d ":" -f 2 | sed s/' '//g`
+	if test -z $bashPath
+	then
+		bashAvailiable=0
+	else
+		bashAvailiable=1
+	fi
+
+	if test $SHELL != "/usr/bin/bash" -a `uname` = "AIX"
+	then
+		if test bashAvailiable -eq 1
+		then
+			fail "!!!"
+			fail "!!! bash is avaliable ! Call this script with bash for a colored output ---"
+			fail "!!!"
+		fi
+
+		disableColor
+	else
+		enableColor
+	fi
+
+	sshdConf=/etc/ssh/sshd_config
+	passwordFile=/etc/security/passwd
+fi
+# control the program reaction in function of the number of arguments
+case $# in 
+
+	0)
+		usage
+		;;
+	1)	
+		checkArg $@	
+		;;
+	2)
+		checkArg $@
+		;;
+	3)
+		checkArg $@
+		;;
+	4)
+		checkArg $@
+		;;
+	5)
+		checkArg $@
+		;;
+	6)
+		checkArg $@
+		;;
+	*)
+		usage
+		;;
+esac
