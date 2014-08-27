@@ -338,26 +338,32 @@ fileOwnership(){
         m_group=$3
 
         base=`basename $m_path`
-        m_rights=`sudo ls -l $m_path/.. | grep $base | sed s/"  * "/":"/g | sed s/" "/":"/g`
+	sudo ls -l $m_path >/dev/null 2>/dev/null
+	if test $? -eq 0
+	then
+		m_rights=`sudo ls -l $m_path/.. | grep $base | sed s/"  * "/":"/g | sed s/" "/":"/g`
 
-        r_owner=`echo $m_rights | cut -d ":" -f 3`
-        if test $m_owner = $r_owner
-        then
-                success $m_path" owner is "$r_owner
-        else
-                fail $m_path" owner is "$r_owner
-        fi
+		r_owner=`echo $m_rights | cut -d ":" -f 3`
+		if test $m_owner = $r_owner
+		then
+				success $m_path" owner is "$r_owner
+		else
+				fail $m_path" owner is "$r_owner
+		fi
 
-        if test $# -eq 3
-        then
-                r_group=`echo $m_rights | cut -d ":" -f 4`
-                if test $m_group = $r_group
-                then
-                        success $m_path" owner group is "$r_group
-                else
-                        fail $m_path" owner group is "$r_group
-                fi
-        fi
+		if test $# -eq 3
+		then
+				r_group=`echo $m_rights | cut -d ":" -f 4`
+				if test $m_group = $r_group
+				then
+						success $m_path" owner group is "$r_group
+				else
+						fail $m_path" owner group is "$r_group
+				fi
+		fi
+	else
+		fail "File or directory "$m_path" Not Found !"
+	fi
 }
 	
 ###
@@ -596,7 +602,7 @@ fileOwnershipCheck(){
 			fileOwnershipFilePath=`echo $fileOwnershipLine | cut -d ":" -f 2`
 			fileOwnershipOwner=`echo $fileOwnershipLine | cut -d ":" -f 3`
 			fileOwnershipGroup=`echo $fileOwnershipLine | cut -d ":" -f 4`
-			normal "Checking "$fileOwnershipFilePath
+			normal "Checking "$fileOwnershipFilePath" ("$fileOwnershipOwner":"$fileOwnershipGroup")"
 			fileOwnership $fileOwnershipFilePath $fileOwnershipOwner $fileOwnershipGroup
 		done
 	else
