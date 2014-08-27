@@ -30,37 +30,81 @@
 
       </header>
       <section>
-        <h3>
-<a name="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages"><span class="octicon octicon-link"></span></a>Welcome to GitHub Pages.</h3>
+        <h1>
+<a name="twp_envchecker" class="anchor" href="#twp_envchecker"><span class="octicon octicon-link"></span></a>twp_envChecker</h1>
 
-<p>This automatic page generator is the easiest way to create beautiful pages for all of your projects. Author your page content here using GitHub Flavored Markdown, select a template crafted by a designer, and publish. After your page is generated, you can check out the new branch:</p>
+<p>Environment checker</p>
 
-<pre><code>$ cd your_repo_root/repo_name
-$ git fetch origin
-$ git checkout gh-pages
+<p><a href="http://twpdone.github.io/twp_envChecker">http://twpdone.github.io/twp_envChecker</a>
+FR</p>
+
+<p>Tapez checkEnv -h pour afficher l'aide.</p>
+
+<p>Vous pouvez lancer les verification une par une:<br><code>checkEnv -NomVerif</code></p>
+
+<p>Ou toutes à la fois <br><code>checkEnv -all</code></p>
+
+<p>Options facultatives<br><code>-eo</code> : Error only :Seules les erreurs s'affichent<br><code>-nc</code> : No color : enleve la coloration syntaxique dans la sortie console, utile si vous souhaitez sauvegarder la sortie dans un fichier<br><code>-html</code> : Produit une sortie html <br>
+        Rediriger la sortie vers un fichier la sortie pour sauvegarder vos resultats sous format html<br><code>-file fileName</code> : Execute les verifications que vos avez definies dans le fichier fileName<br></p>
+
+<p>Pour avoir de l'aide pour creer votre fichier de configuration : <br><code>checkEnv -howToConfig</code></p>
+
+<p>Cette option liste les verifications configurables depuis le fichier de config.</p>
+
+<pre><code>"Le format du fichier de configuration est simple
+ Le format de chaque ligne doit etre :
+    command:argument[:argument2][:argument3][:...]
+
+..."
 </code></pre>
 
-<p>If you're using the GitHub for Mac, simply sync your repository and you'll see the new branch.</p>
+<p>Exemple de fichier de config :<br></p>
 
-<h3>
-<a name="designer-templates" class="anchor" href="#designer-templates"><span class="octicon octicon-link"></span></a>Designer Templates</h3>
+<pre><code>    sshd:/etc/ssh/sshd_config:PermitRootLogin:yes
+    userExist:root:system
+    fileOwnership:/bin:bin:bin
+</code></pre>
 
-<p>We've crafted some handsome templates for you to use. Go ahead and continue to layouts to browse through them. You can easily go back to edit your page before publishing. After publishing your page, you can revisit the page generator and switch to another theme. Your Page content will be preserved if it remained markdown format.</p>
+<p>/!\ attention pas d'espaces en debut de ligne, sinon la commande ne sera pas executee</p>
 
-<h3>
-<a name="rather-drive-stick" class="anchor" href="#rather-drive-stick"><span class="octicon octicon-link"></span></a>Rather Drive Stick?</h3>
+<h2>
+<a name="dev-corner" class="anchor" href="#dev-corner"><span class="octicon octicon-link"></span></a>DEV CORNER</h2>
 
-<p>If you prefer to not use the automatic generator, push a branch named <code>gh-pages</code> to your repository to create a page manually. In addition to supporting regular HTML content, GitHub Pages support Jekyll, a simple, blog aware static site generator written by our own Tom Preston-Werner. Jekyll makes it easy to create site-wide headers and footers without having to copy them across every page. It also offers intelligent blog support and other advanced templating features.</p>
+<p>Pour developper la suite:</p>
 
-<h3>
-<a name="authors-and-contributors" class="anchor" href="#authors-and-contributors"><span class="octicon octicon-link"></span></a>Authors and Contributors</h3>
+<p>Affichage standard avec la fonction "normal", du message de succes de la verification avec "success", et message d'echec de la verification avec "fail".<br>
+Ces fonctions sont a utiliser comme echo</p>
 
-<p>You can <a href="https://github.com/blog/821" class="user-mention">@mention</a> a GitHub username to generate a link to their profile. The resulting <code>&lt;a&gt;</code> element will link to the contributor's GitHub Profile. For example: In 2007, Chris Wanstrath (<a href="https://github.com/defunkt" class="user-mention">@defunkt</a>), PJ Hyett (<a href="https://github.com/pjhyett" class="user-mention">@pjhyett</a>), and Tom Preston-Werner (<a href="https://github.com/mojombo" class="user-mention">@mojombo</a>) founded GitHub.</p>
+<p>Pensez a mettre a jour les fonctions usage, cherckArg, howTo .</p>
 
-<h3>
-<a name="support-or-contact" class="anchor" href="#support-or-contact"><span class="octicon octicon-link"></span></a>Support or Contact</h3>
+<p>Faire une fonction qui fait un check sur un point precis (un user, un fichier, un fs, ...)<br>
+Cette fonction prend des Arguments.</p>
 
-<p>Having trouble with Pages? Check out the documentation at <a href="http://help.github.com/pages">http://help.github.com/pages</a> or contact <a href="mailto:support@github.com">support@github.com</a> and we’ll help you sort it out.</p>
+<p>Faire la fonction de check par defaut.<br>
+Cette fonction appellera autant de fois que necessaire la fonction precedente (fonction de check unitaire)<br>
+Cette fonction pourra eventuellement lire dans le fichier $CONFIGFILE les regles qui matchent a son nom : <br></p>
+
+<p>FunctionName etant le nom de la fonction de test unitaire<br></p>
+
+<pre><code>    if test -f $CONFIGFILE
+    then
+        success $Cyan"*************************"$Off
+        success $Cyan"Reading from "$CONFIGFILE$Off
+        success $Cyan"*************************"$Off
+        functionNameLines=`cat $CONFIGFILE | egrep "^functionName"`
+        for functionNameLine in $functionNameLines
+        do
+            # les arguments sont separes par ":"
+            functionNameArg1=`echo $functionNameLine | cut -d ":" -f 2`
+            functionNameArg2=`echo $functionNameLine | cut -d ":" -f 3`
+
+            functionName $functionNameArg1 $functionNameArg2
+        done
+    else
+        # si $CONFIGFILE n'existe pas
+        # traitement par default
+    fi
+</code></pre>
       </section>
       <footer>
         <p><small>Hosted on <a href="http://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
